@@ -1,10 +1,12 @@
 import os
 from openai import OpenAI
-import time
+from dotenv import load_dotenv
+
+load_dotenv()
 
 assistant_id = os.getenv("ASSISTANT_KEY")
-print(assistant_id)
-print(os.getenv("OPENAI_API_KEY"))
+# print(assistant_id)
+# print(os.getenv("OPENAI_API_KEY"))
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
@@ -33,36 +35,36 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 #maybe add a with to close afterwards
-# message_file = client.files.create(
-#     file=open(r"C:\Users\lorran\Documents\PowerPointAutomation\workflow-files\ch03s1_JG.pptx", "rb"), purpose="assistants"
-# )
+message_file = client.files.create(
+    file=open(r"C:\Users\lorran\Documents\PowerPointAutomation\workflow-files\ch03s1_JG.pptx", "rb"), purpose="assistants"
+)
 
-# thread = client.beta.threads.create(
-#     messages=[
-#         {
-#             "role": "user",
-#             "content": "please summarize this presentation",
-#             "attachments":[
-#                 {"file_id": message_file.id, "tools": [{"type": "file_search"}]}
-#             ],
-#         }
-#     ]
-# )
+thread = client.beta.threads.create(
+    messages=[
+        {
+            "role": "user",
+            "content": "please summarize this presentation",
+            "attachments":[
+                {"file_id": message_file.id, "tools": [{"type": "file_search"}]}
+            ],
+        }
+    ]
+)
 
-# run = client.beta.threads.runs.create_and_poll(
-#     thread_id=thread.id, assistant_id=assistant_id
-# )
+run = client.beta.threads.runs.create_and_poll(
+    thread_id=thread.id, assistant_id=assistant_id
+)
 
-# messages = list(client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id))
+messages = list(client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id))
 
-# message_content = messages[0].content[0].text
-# annotations = message_content.annotations
-# citations = []
-# for index, annotation in enumerate(annotations):
-#     message_content.value = message_content.value.replace(annotation.text, f"[{index}]")
-#     if file_citation := getattr(annotation, "file_citation", None):
-#         cited_file = client.files.retrieve(file_citation.file_id)
-#         citations.append(f"[{index}] {cited_file.filename}")
+message_content = messages[0].content[0].text
+annotations = message_content.annotations
+citations = []
+for index, annotation in enumerate(annotations):
+    message_content.value = message_content.value.replace(annotation.text, f"[{index}]")
+    if file_citation := getattr(annotation, "file_citation", None):
+        cited_file = client.files.retrieve(file_citation.file_id)
+        citations.append(f"[{index}] {cited_file.filename}")
 
-# print(message_content.value)
-# print("\n".join(citations))
+print(message_content.value)
+print("\n".join(citations))
