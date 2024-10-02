@@ -5,52 +5,59 @@ from dotenv import load_dotenv
 load_dotenv()
 
 assistant_id = os.getenv("ASSISTANT_KEY")
-# print(assistant_id)
-# print(os.getenv("OPENAI_API_KEY"))
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# FUNCTION TO request appropriate paths, subject to change if too complicated
+def get_valid_file_path(prompt):
+    while True:
+        path = input(prompt)
+        if os.path.isfile(path):
+            return path
+        else:
+            print("Invalid file path. Please try again.")
 
+def get_valid_directory_path(prompt):
+    while True:
+        path = input(prompt)
+        if os.path.isdir(path):
+            return path
+        else:
+            print("Invalid directory path. Please try again.")
 
-#Create vector store
-# vector_store = client.beta.vector_stores.create(name="Temp Document")
+#calls function, saves appropriate paths
+pptx_file_path = get_valid_file_path("Please enter the path to the PPTX file: ")
+image_folder_path = get_valid_directory_path("Please enter the path to the image folder: ")
+script_folder_title = input("Please enter the title for the script folder: ")
+script_folder_path = get_valid_directory_path("Please enter the file path for the new folder to be generated: ")
 
-# # Upload file
-# file_path = r"C:\Users\lorran\Documents\PowerPointAutomation\workflow-files\ch03s1_JG.pptx"
+#the main prompts that will be used for the presentation
+prompt1 = "please summarize this presentation"
+prompt2 = "please list the title and summary of each slide"
+mainPrompt = (
+    "I am making a recording of this presentation. Please generate a very detailed script for this slide. "
+    "Only include the text for the script. Do not include any other instructions, headings, or commentary about the script. "
+    "Please be verbose. Generate the script as if people can't see the symbols. "
+    "Pronounce any symbolic connectives or well-formed formulas as if you were telling someone to write them on a chalkboard."
+)
 
-# file_streams = [open(path, "rb") for path in file_path]
-
-# #sdk helper to upload files in vector store
-# file_batch = client.beta.vector_stores.file_batches.upload_and_poll(
-#     vector_store_id=vector_store.id, file=file_streams
-# )
-
-# assistant = client.beta.assistants.update(
-#     assistant_id=assistant_id,
-#     tool_resources = {"file_search": {"vector_store_ids": [vector_store.id]}}
-# )
-
-# start from part 4 in the assistants file search documentation
-
-
-
-
-#maybe add a with to close afterwards
+#prepares file, should change to with open
 message_file = client.files.create(
-    file=open(r"C:\Users\lorran\Documents\PowerPointAutomation\workflow-files\ch03s1_JG.pptx", "rb"), purpose="assistants"
+    file=open(pptx_file_path, "rb"), purpose="assistants"
 )
 
 thread = client.beta.threads.create(
     messages=[
         {
             "role": "user",
-            "content": "please summarize this presentation",
-            "attachments":[
+            "content": prompt1,
+            "attachments": [
                 {"file_id": message_file.id, "tools": [{"type": "file_search"}]}
             ],
         }
     ]
 )
 
+#run from openai documentation
 run = client.beta.threads.runs.create_and_poll(
     thread_id=thread.id, assistant_id=assistant_id
 )
