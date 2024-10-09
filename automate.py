@@ -26,9 +26,9 @@ def get_valid_directory_path(prompt):
 
 #calls function, saves appropriate paths
 pptx_file_path = get_valid_file_path("Please enter the path to the PPTX file: ")
-# image_folder_path = get_valid_directory_path("Please enter the path to the image folder: ")
-# script_folder_title = input("Please enter the title for the script folder: ")
-# script_folder_path = get_valid_directory_path("Please enter the file path for the new folder to be generated: ")
+image_folder_path = get_valid_directory_path("Please enter the path to the image folder: ")
+script_folder_title = input("Please enter the title for the script folder: ")
+script_folder_path = get_valid_directory_path("Please enter the file path for the new folder to be generated: ")
 
 #the main prompts that will be used for the presentation
 prompt1 = "please summarize this presentation"
@@ -64,7 +64,8 @@ run = client.beta.threads.runs.create_and_poll(
     assistant_id=assistant_id
 )
 
-# second prompt  created
+#second prompt  created
+#test both out
 client.beta.threads.messages.create( #messages.create to use existing thread
 
     thread_id=thread.id,
@@ -72,25 +73,64 @@ client.beta.threads.messages.create( #messages.create to use existing thread
     content= prompt2
 )
 
+# client.beta.threads.messages.create( #messages.create to use existing thread
+
+#     thread_id=thread.id,
+#     messages=[{    
+#         "role":"user",
+#         "content": prompt2}]
+
+# )
+
 #second prompt processed
 run = client.beta.threads.runs.create_and_poll(
     thread_id=thread.id, 
     assistant_id=assistant_id
 )
 
-messages = list(client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id))
 
-message_content = messages[0].content[0].text
-annotations = message_content.annotations
-citations = []
-for index, annotation in enumerate(annotations):
-    message_content.value = message_content.value.replace(annotation.text, f"[{index}]")
-    if file_citation := getattr(annotation, "file_citation", None):
-        cited_file = client.files.retrieve(file_citation.file_id)
-        citations.append(f"[{index}] {cited_file.filename}")
+for index,imagefile in enumerate (os.listdir(image_folder_path)):
 
-print(message_content.value)
-print("\n".join(citations))
+    file_name = f"{script_folder_title}_{index+1}.txt" #name of file with the iteration/order to be stored
+
+    file_path = os.path.join(image_folder_path, imagefile) # filepath to image
+    
+    message_file = client.files.create(
+        file=open(file_path, "rb"), purpose="assistants"
+    )
+
+    #existing thread
+    client.beta.threads.messages.create(
+        thread_id=thread.id,
+        messages=[
+        {
+            "role": "user",
+            "content": mainPrompt,
+            "attachments": [
+                {"file_id": message_file.id, "tools": [{"type": "file_search"}]}
+            ],
+        }
+    ]
+
+    )
+    messages = list(client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id))
+
+    message_content = messages[0].content[0].text
+    annotations = message_content.annotations
+    citations = []
+    for index, annotation in enumerate(annotations):
+        message_content.value = message_content.value.replace(annotation.text, f"[{index}]")
+        if file_citation := getattr(annotation, "file_citation", None):
+            cited_file = client.files.retrieve(file_citation.file_id)
+            citations.append(f"[{index}] {cited_file.filename}")
+
+    text_file_path = os.path.join(script_folder_path, file_name)
+    with open(text_file_path, "w") as text_file:
+        text_file.write(message_content.value)     
+
+
+    print(message_content.value)
+    print("\n".join(citations))
 
 
 
