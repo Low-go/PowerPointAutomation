@@ -26,9 +26,9 @@ def get_valid_directory_path(prompt):
 
 #calls function, saves appropriate paths
 pptx_file_path = get_valid_file_path("Please enter the path to the PPTX file: ")
-image_folder_path = get_valid_directory_path("Please enter the path to the image folder: ")
-script_folder_title = input("Please enter the title for the script folder: ")
-script_folder_path = get_valid_directory_path("Please enter the file path for the new folder to be generated: ")
+# image_folder_path = get_valid_directory_path("Please enter the path to the image folder: ")
+# script_folder_title = input("Please enter the title for the script folder: ")
+# script_folder_path = get_valid_directory_path("Please enter the file path for the new folder to be generated: ")
 
 #the main prompts that will be used for the presentation
 prompt1 = "please summarize this presentation"
@@ -45,6 +45,7 @@ message_file = client.files.create(
     file=open(pptx_file_path, "rb"), purpose="assistants"
 )
 
+# first prompt  created
 thread = client.beta.threads.create(
     messages=[
         {
@@ -57,9 +58,24 @@ thread = client.beta.threads.create(
     ]
 )
 
-#run from openai documentation
+#first prompt processed
 run = client.beta.threads.runs.create_and_poll(
-    thread_id=thread.id, assistant_id=assistant_id
+    thread_id=thread.id, 
+    assistant_id=assistant_id
+)
+
+# second prompt  created
+client.beta.threads.messages.create( #messages.create to use existing thread
+
+    thread_id=thread.id,
+    role="user",
+    content= prompt2
+)
+
+#second prompt processed
+run = client.beta.threads.runs.create_and_poll(
+    thread_id=thread.id, 
+    assistant_id=assistant_id
 )
 
 messages = list(client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id))
@@ -75,3 +91,8 @@ for index, annotation in enumerate(annotations):
 
 print(message_content.value)
 print("\n".join(citations))
+
+
+
+# note to self, threads allow conversation context to be maintained
+# so i do not have to manually maintain it through an array
