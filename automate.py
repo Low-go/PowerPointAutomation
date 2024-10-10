@@ -1,6 +1,8 @@
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+import base64
+import requests
 
 load_dotenv()
 
@@ -23,6 +25,11 @@ def get_valid_directory_path(prompt):
             return path
         else:
             print("Invalid directory path. Please try again.")
+
+# for encoding
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
 
 #calls function, saves appropriate paths
 pptx_file_path = get_valid_file_path("Please enter the path to the PPTX file: ")
@@ -102,17 +109,13 @@ for index,imagefile in enumerate (os.listdir(image_folder_path)):
     #existing thread
     client.beta.threads.messages.create(
         thread_id=thread.id,
-        messages=[
-        {
-            "role": "user",
-            "content": mainPrompt,
-            "attachments": [
-                {"file_id": message_file.id, "tools": [{"type": "file_search"}]}
-            ],
-        }
-    ]
-
+        role="user",
+        content=mainPrompt,
+        attachments=[
+            {"file_id": message_file.id, "tools": [{"type": "file_search"}]}
+        ]
     )
+
     messages = list(client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id))
 
     message_content = messages[0].content[0].text
