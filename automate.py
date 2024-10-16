@@ -71,69 +71,72 @@ run = client.beta.threads.runs.create_and_poll(
     assistant_id=assistant_id
 )
 
-#second prompt  created
-#test both out
-client.beta.threads.messages.create( #messages.create to use existing thread
+messages = client.beta.threads.messages.list(thread_id=thread.id)
+summary = messages.data[0].content[0].text.value
 
+# Get slide titles and summaries
+client.beta.threads.messages.create(
     thread_id=thread.id,
     role="user",
-    content= prompt2
+    content=prompt2
 )
 
-# client.beta.threads.messages.create( #messages.create to use existing thread
-
-#     thread_id=thread.id,
-#     messages=[{    
-#         "role":"user",
-#         "content": prompt2}]
-
-# )
-
-#second prompt processed
 run = client.beta.threads.runs.create_and_poll(
     thread_id=thread.id, 
     assistant_id=assistant_id
 )
 
+messages = client.beta.threads.messages.list(thread_id=thread.id)
+slide_info = messages.data[0].content[0].text.value
 
-for index,imagefile in enumerate (os.listdir(image_folder_path)):
-
-    file_name = f"{script_folder_title}_{index+1}.txt" #name of file with the iteration/order to be stored
-
-    file_path = os.path.join(image_folder_path, imagefile) # filepath to image
+# Function to process image with Vision API
+def process_image_with_vision(image_path, slide_number, summary, slide_info):
+    base64_image = encode_image(image_path)
     
-    message_file = client.files.create(
-        file=open(file_path, "rb"), purpose="assistants"
-    )
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}"
+    }
+    
+    payload = {
+        "model": "gpt-4o-mini",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"This is slide {slide_number} of a presentation. Here's a summary of the entire presentation: {summary}\n\nHere's information about all slides: {slide_info}\n\n{mainPrompt}"
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ],
+        "max_tokens": 500
+    }
+    
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+    return response.json()['choices'][0]['message']['content']
 
-    #existing thread
-    client.beta.threads.messages.create(
-        thread_id=thread.id,
-        role="user",
-        content=mainPrompt,
-        attachments=[
-            {"file_id": message_file.id, "tools": [{"type": "file_search"}]}
-        ]
-    )
-
-    messages = list(client.beta.threads.messages.list(thread_id=thread.id, run_id=run.id))
-
-    message_content = messages[0].content[0].text
-    annotations = message_content.annotations
-    citations = []
-    for index, annotation in enumerate(annotations):
-        message_content.value = message_content.value.replace(annotation.text, f"[{index}]")
-        if file_citation := getattr(annotation, "file_citation", None):
-            cited_file = client.files.retrieve(file_citation.file_id)
-            citations.append(f"[{index}] {cited_file.filename}")
-
+# Process each image
+for index, imagefile in enumerate(os.listdir(image_folder_path)):
+    file_name = f"{script_folder_title}_{index+1}.txt"
+    file_path = os.path.join(image_folder_path, imagefile)
+    
+    script_content = process_image_with_vision(file_path, index + 1, summary, slide_info)
+    
     text_file_path = os.path.join(script_folder_path, file_name)
     with open(text_file_path, "w") as text_file:
-        text_file.write(message_content.value)     
+        text_file.write(script_content)
+    
+    print(f"Processed slide {index + 1}")
 
-
-    print(message_content.value)
-    print("\n".join(citations))
+print("All slides processed successfully!")
 
 
 
