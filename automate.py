@@ -37,6 +37,10 @@ image_folder_path = get_valid_directory_path("Please enter the path to the image
 script_folder_title = input("Please enter the title for the script folder: ")
 script_folder_path = get_valid_directory_path("Please enter the file path for the new folder to be generated: ")
 
+# Create the new folder for scripts using the script_folder_title
+output_folder_path = os.path.join(script_folder_path, script_folder_title)
+os.makedirs(output_folder_path, exist_ok=True)
+
 #the main prompts that will be used for the presentation
 prompt1 = "please summarize this presentation"
 prompt2 = "please list the title and summary of each slide"
@@ -99,7 +103,7 @@ def process_image_with_vision(image_path, slide_number, summary, slide_info):
     }
     
     payload = {
-        "model": "gpt-4o-mini",
+        "model": "gpt-4o",
         "messages": [
             {
                 "role": "user",
@@ -117,7 +121,7 @@ def process_image_with_vision(image_path, slide_number, summary, slide_info):
                 ]
             }
         ],
-        "max_tokens": 500
+        "max_tokens": 900
     }
     
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
@@ -130,15 +134,11 @@ for index, imagefile in enumerate(os.listdir(image_folder_path)):
     
     script_content = process_image_with_vision(file_path, index + 1, summary, slide_info)
     
-    text_file_path = os.path.join(script_folder_path, file_name)
+    # Save to the new folder created with script_folder_title
+    text_file_path = os.path.join(output_folder_path, file_name)
     with open(text_file_path, "w") as text_file:
         text_file.write(script_content)
     
     print(f"Processed slide {index + 1}")
 
 print("All slides processed successfully!")
-
-
-
-# note to self, threads allow conversation context to be maintained
-# so i do not have to manually maintain it through an array
