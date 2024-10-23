@@ -121,7 +121,7 @@ def process_image_with_vision(image_path, slide_number, summary, slide_info):
                 ]
             }
         ],
-        "max_tokens": 900
+        "max_tokens": 2043
     }
     
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
