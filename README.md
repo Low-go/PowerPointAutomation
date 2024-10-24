@@ -17,3 +17,6 @@ This tool automates generating detailed scripts from PPTX presentations using Op
 ## Usage
 1. Clone this repo.
 2. Create a `.env` file with your API keys:
+3. Possibly if you wnat make a `venv` virtual environment
+4. Use the requirements.txt file to download all dependencies
+5. Enjoy

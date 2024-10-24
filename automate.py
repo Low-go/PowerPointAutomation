@@ -102,6 +102,7 @@ def process_image_with_vision(image_path, slide_number, summary, slide_info):
         "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}"
     }
     
+    #change model according to needs
     payload = {
         "model": "gpt-4o",
         "messages": [
@@ -121,6 +122,8 @@ def process_image_with_vision(image_path, slide_number, summary, slide_info):
                 ]
             }
         ],
+        
+        #not sure if changing this would change output size
         "max_tokens": 2043
     }
     
